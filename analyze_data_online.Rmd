@@ -1,0 +1,297 @@
+---
+title: "Bellabeat Analysis"
+author: "Simcha Tropp"
+date: "2025-04-17"
+output:
+  html_document:
+    css: "bellabeat_styles.css"
+---
+
+
+## Introduction
+In the Analyze phase we will explore trends in FitBit user data (April-May 2016) to inform Bellabeat marketing strategy. Using merged_data_cleaned.csv, we will summarize relationships between steps, sleep, intensity, and heartrate.
+
+```{r setup, include=FALSE}
+#Setup chunk: Load libraries and set options
+library(tidyverse) # for data manipulation and visualization
+library(lubridate) # for handling dates
+knitr::opts_chunk$set(echo = TRUE) # show code in output
+```
+
+
+## Step 1: Load and Preview Data
+This step loads the cleaned dataset 'merged_data_cleaned.csv' and previews its structure to confirm all metrics are available.
+
+```{r load-data}
+# Load and preview cleaned dataset
+# Dataset available at: https://www.kaggle.com/datasets/arashnic/fitbit
+# merged_data <- read_csv("D:/Bellabeat/merged_data_cleaned.csv")
+head(merged_data, 3)
+```
+
+
+## Step 2: Summarize Key Metrics
+To understand typical behavior, we calculate average steps, sleep hours, calories and heart rate as well as the percentage of records with sleep and heart rate information.
+
+```{r summary-stats}
+summary_stats <- merged_data %>%
+  summarise(
+    AvgSteps = mean(TotalSteps, na.rm = TRUE),
+    AvgSleepHours = mean(TotalMinutesAsleep / 60, na.rm = TRUE),
+    AvgCalories = mean(Calories, na.rm = TRUE), 
+    AvgHeartRate = mean(AvgHeartRate, na.rm = TRUE),
+    PctSleepLogged = mean(!is.na(TotalMinutesAsleep)) * 100,
+    PctHeartRateLogged = mean(!is.na(AvgHeartRate)) * 100
+  )
+summary_stats
+```
+PctSleepLogged and PctHeartRateLogged represent the percentage of daily records with sleep and heart rate data, respectively.
+
+## Step 3: Visualize Steps vs. Sleep
+To explore whether activity affects sleep, we'll create a scatter plot of daily steps against sleep hours. A strong correlation or lack of correlation could suggest whether these features should be marketed together or separately. 
+
+```{r steps-vs-sleep, fig.width=6, fig.height=4}
+#Visualize steps vs sleep
+ggplot(data = merged_data, aes(x = TotalSteps, y = TotalMinutesAsleep / 60)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Steps vs. Sleep Hours",
+       x = "Total Steps",
+       y = "Sleep Hours",
+       caption = "Data: FitBit Fitness Tracker Data 4.12.16-5.12.16") +
+  theme_minimal()
+```
+
+
+## Step 4: Weekly Activity Patterns
+To identify when users are most active, we'll calculate average steps by day of the week. This may offer insight into lifestyle patterns that could be informative for targeted Bellabeat marketing campaigns.
+
+```{r weekly-steps, fig.width=7, fig.height=4}
+#Calculate average steps by day of week
+weekly_steps <- merged_data %>%
+  mutate(DayOfWeek = factor(DayOfWeek, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>%
+  group_by(DayOfWeek) %>%
+  summarise(AvgSteps = mean(TotalSteps, na.rm = TRUE))
+
+
+#Visualize with a bar chart
+steps_plot <- ggplot(weekly_steps, aes(x = DayOfWeek, y = AvgSteps, fill = DayOfWeek)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("Monday" = "#A8D5Ba", "Tuesday" = "#F8B8C6", "Wednesday" = "#A8D5Ba", "Thursday" = "#F8B8C6", "Friday" = "#A8D5Ba", "Saturday"= "#F8B8C6", "Sunday" = "#A8D5Ba")) +
+  labs(title = "Average Steps by Day of Week",
+       x = "Day of Week",
+       y = "Average Steps",
+       caption = "Data: Fitbase 4.12.16-5.12.16") +
+  theme_minimal() +
+  theme(legend.position = "none")
+steps_plot
+```
+
+
+## Step 5: Sleep Patterns by Day of Week
+Building on Step 4's findings of higher activity on Tuesday and Saturday, we will also calculate average sleep hours by day of the week to determine how sleep patterns align with activity or lifestyle.
+
+```{r sleep-by-day, fig.width=7, fig.height=4}
+#Calculate average sleep hours by day of week
+sleep_by_day <- merged_data %>%
+  mutate(DayOfWeek = factor(DayOfWeek, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>%
+  group_by(DayOfWeek) %>%
+  summarise(AvgSleepHours = mean(TotalMinutesAsleep / 60, na.rm = TRUE))
+
+#Visualize with a bar chart
+sleep_plot <- ggplot(sleep_by_day, aes(x = DayOfWeek, y = AvgSleepHours, fill = DayOfWeek)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("Monday" = "#A8D5BA", "Tuesday" = "#F8B8C6", "Wednesday" = "#A8D5BA", "Thursday" = "#F8B8C6", "Friday" = "#A8D5BA", "Saturday"= "#F8B8C6", "Sunday" = "#A8D5BA")) +
+  labs(title = "Average Sleep Hours by Day of Week",
+       x = "Day of Week",
+       y = "Average Sleep Hours",
+       caption = "Data: Fitbase 4.12.16-5.12.16") +
+  theme_minimal() +
+  theme(legend.position = "none")
+sleep_plot
+```
+
+
+## Step 6: Sedentary vs. Active behavior
+To understand user activity profiles, we will compare how users balance their activity between sedentary minutes, lightly active minutes, fairly active minutes, and very active minutes. This may be informative for strategies to encourage more activity.
+
+```{r sedentary vs active, fig.width=7, fig.height=4}
+#Summarize activity minutes
+activity_profile <- merged_data %>%
+  summarise(
+    Sedentary = mean(SedentaryMinutes.x, na.rm=TRUE),
+    LightlyActive = mean(LightlyActiveMinutes.x, na.rm = TRUE),
+    FairlyActive = mean(FairlyActiveMinutes.x, na.rm =TRUE),
+    VeryActive = mean(VeryActiveMinutes.x, na.rm = TRUE)
+  ) %>%
+  pivot_longer(everything(), names_to = "ActivityType", values_to = "Minutes")
+
+#Visualize with a bar chart
+sedentary_plot <- ggplot(activity_profile, aes(x = ActivityType, y = Minutes, fill = ActivityType)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("Sedentary" = "#2B3A67", "LightlyActive" = "#A8D5BA", "FairlyActive" = "#F8B8C6", "VeryActive" = "#2B3A67")) +
+  labs(title = "Average Minutes by Activity Type",
+       x = "Activity Type",
+       y = "Average Minutes per Day",
+       caption = "Data: FitBit Fitness Tracker Data 4.12.16-5.12.16") +
+  theme_minimal() +
+  theme(legend.position = "none")
+sedentary_plot
+```
+
+
+## Step 7 Heart Rate and Activity Correlation
+To assess the relationship between activity levels and heart rate, we will plot average heart rate against steps and calories. We noted earlier that only ~42% of records include heart rate data, so analyzing this data can show us opportunities to promote and market heart rate tracking features.
+
+```{r load grid extra}
+# Load gridExtra  for multiple plots
+library(gridExtra)
+```
+
+
+```{r heart-rate-correlation, fig.width=7, fig.height=4}
+# Filter non-NA heart rate data
+heart_rate_data <- merged_data %>% filter(!is.na(AvgHeartRate))
+
+# Scatter plot: Heart rate vs. steps
+hr_steps_plot <- ggplot(heart_rate_data, aes(x = TotalSteps, y = AvgHeartRate)) +
+  geom_point(color = "#A8D5BA", alpha = 0.3) +
+  geom_smooth(method = "lm", se = FALSE, color = "#F8B8C6") +
+  labs(title = "Heart Rate vs. Steps",
+       x = "Total Steps",
+       y = "Average Heart Rate (BPM)",
+       caption = "Data: FitBit Fitness Tracker Data 4.12.16-5.12.16") +
+  theme_minimal()
+
+# Scatter plot: Heart rate vs. calories
+hr_calories_plot <- ggplot(heart_rate_data, aes(x = Calories, y = AvgHeartRate)) +
+  geom_point(color = "#A8D5BA", alpha = 0.3) +
+  geom_smooth(method = "lm", se = FALSE, color = "#F8B8C6") +
+  labs(title = "Heart Rate vs. Calories",
+       x = "Calories Burned",
+       y = "Average Heart Rate (BPM)",
+       caption = "Data: FitBit Fitness Tracker Data 4.12.16-5.12.16") +
+  theme_minimal()
+
+# Display plots side by side
+grid.arrange(hr_steps_plot, hr_calories_plot, ncol = 2)
+```
+
+
+## Step 8 Summarize key findings of analyze phase
+Steps 1-7 of the Analyze phase uncovered several interesting insights from the FitBit user data which can help inform Bellabeat’s marketing strategies.
+
+-	**Step 1:** Loaded and previewed our cleaned and merged dataset (merged_data_cleaned.csv)
+
+-	**Step 2:** Summarized key metrics, finding average steps at ~7638, sleep at ~7 hours, and 
+heart rate tracking at ~42%
+
+-	**Step 3:** Plotted steps vs. sleep hours showing no correlation, showing that activity and sleep are independent wellness factors
+
+-	**Step 4:** Analyzed weekly activity patterns showing the highest step totals on Tuesday and Saturday, and the lowest on Sunday.
+
+-	**Step 5:** Examined weekly sleep patterns, finding higher sleep on Sundays and lower on Tuesday.
+
+-	**Step 6:** Compared sedentary vs. active minutes finding that sedentary time dominates, with ~16.5 hours/day even on active days indicating a need to encourage more movement. Excluding sleep (~7 hours), users spend ~16.5 hours of their waking day sedentary, indicating a need for more movement.
+
+-	**Step 7:** Explored how heart rate correlates with steps and calories, finding a weak positive relationship which along with the low tracking rates of heart rate metrics suggest an opportunity to promote heart rate monitoring features.
+
+
+# Share Phase: Visualizations and Storytelling
+In the Share phase, we will present the key findings from the Analyze phase (Steps 1-7). These insights highlight trends in FitBit user data, setting the stage for marketing recommendations for Bellabeat products in the Act phase.
+
+## Key Findings Recap
+The Analyze phase revealed the following key trends from the FitBit user data:
+
+- **Weekly Activity Patterns (Step 4)**: Users are most active on Tuesdays and Saturdays, with the lowest activity on Sunday.
+
+- **Sleep Patterns (Step 5)**: Users sleep the most on Sunday (7.55 hours) and the least on Tuesday (6.74 hours), with only ~44% tracking sleep.
+
+- **Sedentary Behavior (Step 6)**: Sedentary time dominates at ~16.5 hours/day, even on active days, indicating a need to encourage more movement throughout the day. 
+
+- **Heart Rate Tracking (Step 7)**: Only ~42% of users track heart rate, with a weak positive correlation between heart rate and steps/calories, suggesting that this feature is not used enough.
+
+**Important Caveat**: These trends are derived from FitBit data over 31 days in 2016 and may differ for Bellabeat’s female audience in 2025. Further data collection, as we will recommend in the Act phase, will validate or improve our understanding of these patterns.
+
+## Visualizations and Insights
+Our visualizations highlight the key findings identified in the Analyze phase, telling a story about user habits and how they engage with their health tracking devices and where opportunities may lie for Bellabeat:
+
+- **Weekly Activity Patterns (Step 4)**: The chart below shows that users take the most steps on Tuesday and Saturday, with Sunday being the least active day. This suggests lifestyle patterns (e.g., work, family or social activities on weekdays/weekends) that Bellabeat can leverage for targeted engagement.
+```{r}
+steps_plot
+```
+
+- **Sleep Patterns (Step 5)**: The bar chart shows that users sleep more on Sundays (7.55 hours) and less on Tuesdays (6.74 hours), indicating a need for better rest on active days. It should also be noted that only 73% of users tracked sleep and heart rate, and among all daily records, only ~44% and ~42% include sleep and heart rate data, respectively, highlighting inconsistent usage.
+```{r}
+sleep_plot
+```
+- **Sedentary vs. Active Behavior (Step 6)**: This bar chart reveals that users spend ~16.5 hours/day sedentary, even on active days, highlighting a critical opportunity to encourage more frequent movement throughout the day.
+```{r}
+sedentary_plot
+```
+- **Heart Rate and Activity Correlation (Step 7)**: Scatter plots show a weak positive correlation between heart rate and steps/calories, with only ~42% tracking heart rate, suggesting that this feature is being underused.
+```{r}
+grid.arrange(hr_steps_plot, hr_calories_plot, ncol = 2)
+```
+
+
+# Act Phase: Recommendations and Next Steps
+In the Act phase, we present recommendations for Bellabeat based on our Analyze phase findings, followed by an implementation plan and success metrics to ensure these strategies enhance user engagement and wellness. These recommendations align with Bellabeat’s mission of empowering women with knowledge about their own health and habits.
+
+## Marketing Recommendations
+Based on these findings, we propose the following strategies to enhance marketing of the Bellabeat app and Leaf tracker:
+
+- **Encourage Activity on Low-Step Days (Sunday)**: Launch a “Sunday Stroll” campaign, encouraging users to take a short walk with Leaf’s step tracking, based on Sunday being the low activity day as identified in Step 4.
+
+- **Promote Sleep Tracking on High-Activity Days (Tuesday/Saturday)**: Use Step 5’s finding of lower sleep on active days like Tuesdays to promote Leaf’s sleep tracking with messages to app users like “Busy Tuesday? Track your sleep with Leaf to ensure recovery!” This encourages better rest habits, which are crucial for health.
+
+- **Boost Heart Rate Tracking (Step 7)**: Address the low tracking rate (~42%) with a campaign like “With All Your Heart!” emphasizing Leaf’s heart rate feature on the busiest high-step days (Tuesday/Saturday). This can enhance users’ understanding of their physiological response to activity and encourage engagement with their Bellabeat products.
+
+- **Host a “Move More Challenge” with Social Sharing (Step 6)**: Launch a 30-day challenge to reduce sedentary time (~16.5 hours/day) by encouraging small daily activities (e.g., 5-minute walks hourly). Highlight research (e.g., LaCroix et al., 2025) showing that consistent light activity significantly reduces heart attack risk.. Add social sharing in the Bellabeat app, letting users post progress with #MoveMoreWithLeaf, fostering community and brand visibility.
+
+- **Offer a “Buddy System” for Activity Goals (Step 4)**: Add a Bellabeat app feature for users to pair with a friend or another random user for step goals, with in-app cheers or badges when both succeed, encouraging light movement and community especially on low-activity days.
+
+- **Develop a “Wellness Insights Blog Series” (Steps 5 and 7)**: Launch a blog series on Bellabeat’s site with topics like “Why Tracking Sleep on Active Days Matters” (noting Tuesday’s 6.74 hours sleep) and “How Heart Rate Tracking Boosts Wellness.” Reach out to users for testimonials to publish with the blogs to drive interest in Leaf’s tracking features.
+
+
+## Additional Recommendation
+
+### Collect Bellabeat User Data for Accurate Baselines
+
+The FitBit dataset used in this analysis provides valuable insights, but it may not fully reflect Bellabeat’s user base, particularly given Bellabeat’s focus on women’s wellness and the limited time frame and sample size of the FitBit data. To ensure that the success metrics for these marketing strategies are realistic and meaningful, we recommend that Bellabeat collect usage data from its own clients before fully implementing these campaigns. This data should include:
+
+- Average daily steps by day of week, to establish baselines for campaigns like "Sunday Stroll."
+- Percentage of users tracking sleep, especially on high-activity days.
+- Average daily sedentary minutes, to set a realistic target for the "Move More Challenge."
+- Percentage of users tracking heart rate, to tailor the "With All Your Heart!" campaign.
+
+Collecting this data over 3-6 months via the Bellabeat app (complying with protocols for user consent and privacy) will provide a solid foundation for setting achievable targets and measuring success.
+
+
+## Implementation Plan
+Bellabeat can implement these marketing recommendations with the following steps:
+
+**Phase 1: Data Collection (May 2025-October 2025)**: Collect usage data from Bellabeat users over 3-6 months to establish baselines for steps, sleep tracking, sedentary time, and heart rate tracking, as outlined in the recommendation above.
+
+**Phase 2: Launch Campaigns (November 2025–January 2026)**: Roll out the “Sunday Stroll,” “With All Your Heart!,” and “Move More Challenge” campaigns, using social media (e.g. Instagram, Facebook, X), Google Search ads, and in-app notifications. Partner with wellness influencers to promote the “Move More Challenge” with #MoveMoreWithLeaf.
+
+**Phase 3: Update the Bellabeat App (By June 2025)**: Add features like sleep tracking notifications on selected days, a buddy system for step goals, and social sharing capabilities, ensuring seamless integration with Leaf’s tracking features.
+
+**Phase 4: Content Strategy (By July 2025)**: Launch the “Wellness Insights Blog Series,” featuring user testimonials and educational content on sleep and heart rate tracking, promoted via email campaigns and social media.
+
+
+## Success Metrics
+To evaluate the impact of these strategies, Bellabeat can track the following metrics over the first 6 months. Since the FitBit data may not reflect Bellabeat users, we recommend using these as interim engagement metrics while Bellabeat collects its own baseline data:
+
+- **Sunday Activity**: Measure the percentage of users who engage with the “Sunday Stroll” campaign (target: 10% log a walk on Sundays after receiving notifications) and buddy system participation rates (target: 5% of users join within 3 months).
+
+- **Sleep Tracking**: Measure the percentage of users who start tracking sleep on Tuesdays and Saturdays after receiving notifications (target: 10% of users who receive the message begin tracking within a month).
+
+- **Sedentary Time**: Measure participation in the “Move More Challenge” (target: 10% of users join and log at least one activity per day) and social sharing activity (target: 500 #MoveMoreWithLeaf posts within 6 months).
+
+- **Heart Rate Tracking**: Measure the percentage of users who activate heart rate tracking after the “With All Your Heart!” campaign (target: 8% of users who see the campaign start tracking within a month).
+
+- **User Engagement**: Assess social sharing activity (e.g. #MoveMoreWithLeaf posts) and blog engagement metrics (e.g., page views, click-through rates) to gauge community and brand visibility.
+
+Once Bellabeat collects its own data, these metrics can be updated with specific targets (e.g. 10% increase in Sunday steps, 20% reduction in sedentary time) based on the newly established baselines.
+

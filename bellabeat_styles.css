@@ -1,0 +1,14 @@
+/* Bellabeat header styles */
+h1 {
+  color: #2B3A67; /*Navy blue for # headers */
+  font-weight: bold;
+}
+
+h2 {
+  color: #A8D5BA; /*Mint green for ## headers */
+  font-weight: bold;
+}
+h3 {
+  color: #F8B8C6; /* Blush pink for ### headers */
+  font-weight: normal;
+}
