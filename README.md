@@ -21,4 +21,4 @@ This project analyzes FitBit user data to provide marketing recommendations for 
 - Microsoft Word
 
 ## Contact
-Connect with me on [LinkedIn](www.linkedin.com/in/simcha-tropp) or email me at tamidbisimcha@gmail.com.
+Connect with me on [LinkedIn](www.linkedin.com/in/simcha-tropp), email me at tamidbisimcha@gmail.com, or or check out my Kaggle profile: [https://www.kaggle.com/simchatropp](https://www.kaggle.com/simchatropp).
